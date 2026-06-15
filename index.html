@@ -1472,7 +1472,7 @@ async function submit(){
 
   // Fallback: download the PDF and open a pre-filled email (recipients/subject/body set; attach the file manually).
   triggerDownload(blob, filename);
-  const body=summary+"\n\n>>> Please attach the downloaded PDF (report + receipts) before sending. <<<";
+  const body=">>> Please attach the downloaded PDF (report + receipts) before sending. <<<\n\n"+summary;
   const mailto="mailto:"+encodeURIComponent(data.header.empEmail)+"?cc="+encodeURIComponent(data.header.mgrEmail+","+PROCESSING_EMAIL)+"&subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
   setTimeout(()=>{ window.location.href=mailto; },700);
   toast("PDF downloaded — attach it to the email that just opened.");
