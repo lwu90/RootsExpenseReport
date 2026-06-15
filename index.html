@@ -1442,7 +1442,7 @@ async function submit(){
   const filename=fileBase(data)+".pdf";
   const blob=new Blob([pdfBytes],{type:"application/pdf"});
   const t=totalsByCurrency(data.rows);
-  const subject="Expense Report — "+data.header.name+" ("+data.header.from+" to "+data.header.to+") "+APP_VERSION;
+  const subject=data.header.name+"'s Expense Report";
   const recipients="To: "+data.header.empEmail+"\nCc: "+data.header.mgrEmail+", "+PROCESSING_EMAIL;
   const summary=["Hi,","","Please find my expense report for approval and processing.","",
     "Employee: "+data.header.name,
@@ -1450,7 +1450,7 @@ async function submit(){
     "Period: "+data.header.from+" to "+data.header.to,
     "Items: "+data.rows.length,
     "Total (CAD): $"+t.CAD.total.toFixed(2),"Total (USD): $"+t.USD.total.toFixed(2),
-    "Form version: "+APP_VERSION,"","Thank you,",data.header.name].join("\n");
+    "","Thank you,",data.header.name].join("\n");
 
   // Preferred: hand the PDF to the OS share sheet so it arrives already attached (mobile + supported desktop).
   try{
