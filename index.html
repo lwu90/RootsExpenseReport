@@ -484,8 +484,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     padding:9px 11px;background:#fff;width:100%;min-width:0;max-width:100%;transition:border-color .12s, box-shadow .12s}
   textarea{resize:vertical;min-height:38px}
   /* iOS gives date inputs an intrinsic min width and ignores width:100%; reset native appearance so they fit. */
-  input[type=date]{-webkit-appearance:none;appearance:none;display:block;box-sizing:border-box}
-  input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
+  input[type=date]{-webkit-appearance:none;appearance:none;display:block;box-sizing:border-box;line-height:1.45}
+  /* Reserve one line of height so an empty date input is the same height as other fields (iOS collapses it otherwise). */
+  input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0;min-height:1.45em;line-height:1.45}
+  input[type=date]::-webkit-datetime-edit{line-height:1.45}
   input[type=date]::-webkit-calendar-picker-indicator{margin-left:auto}
   input.locked,input[readonly]{background:var(--green-soft);border-style:dashed;color:var(--ink);cursor:default}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green-mid);box-shadow:0 0 0 3px rgba(43,82,51,.14)}
@@ -733,7 +735,7 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILES_PER_ITEM = 5;
 const MILEAGE_RATE = 0.50;       // CAD per km, no tax
 // Form build version — BUMP THIS whenever the form changes (e.g., GL dropdowns). Format: v[Date]-[Time].
-const APP_VERSION = "v20260616-0115";
+const APP_VERSION = "v20260616-0135";
 const DEPARTMENTS_NEEDING_LOCATION = ["Stores", "Partners and Other", "Head Office"];
 
 // Functions whose location/department code is a fixed dropdown (code is the option value; label shows "code - name").
