@@ -735,7 +735,7 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILES_PER_ITEM = 5;
 const MILEAGE_RATE = 0.50;       // CAD per km, no tax
 // Form build version — BUMP THIS whenever the form changes (e.g., GL dropdowns). Format: v[Date]-[Time].
-const APP_VERSION = "v20260617-1330";
+const APP_VERSION = "v20260617-1400";
 
 /* ============================================================
    AI RECEIPT SCANNING (optional pilot) — Cloudflare Worker + Gemini
@@ -743,7 +743,7 @@ const APP_VERSION = "v20260617-1330";
    Leave it as "" and the "Scan receipt with AI" button simply won't appear.
    AI_APP_TOKEN is optional and only needed if you set an APP_TOKEN secret on the Worker.
    ============================================================ */
-const AI_PROXY_URL = "roots-expense-ai.lwu-ccd.workers.dev";
+const AI_PROXY_URL = "https://roots-expense-ai.lwu-ccd.workers.dev/";
 const AI_APP_TOKEN = "RootsSince1973!";
 const AI_ENABLED = !!AI_PROXY_URL;
 const DEPARTMENTS_NEEDING_LOCATION = ["Stores", "Partners and Other", "Head Office"];
@@ -1101,7 +1101,13 @@ async function aiScan(node,id){
     if(AI_APP_TOKEN) headers["X-App-Token"]=AI_APP_TOKEN;
     const resp=await fetch(AI_PROXY_URL,{method:"POST",headers,body:JSON.stringify({imageBase64:b64,mimeType:mime,glOptions})});
     const out=await resp.json().catch(()=>null);
-    if(!resp.ok||!out||!out.ok||!out.data){ console.warn("AI scan response:",resp.status,out); setStatus("Couldn't read that receipt"+(out&&out.error?(": "+out.error):"")+". You can fill it in manually.",true); return; }
+    if(!resp.ok||!out||!out.ok||!out.data){
+      const detail=(out&&out.error)?out.error:("server returned HTTP "+resp.status+" with no readable response");
+      console.warn("AI scan failed:",resp.status,out);
+      setStatus("Couldn't read that receipt: "+detail+". You can fill it in manually.",true);
+      toast("AI scan failed: "+detail,true);
+      return;
+    }
     const filled=applyAiSuggestions(node,out.data);
     const desc=node.querySelector('[data-f="description"]'); if(desc){ desc.style.height="auto"; desc.style.height=desc.scrollHeight+"px"; }
     recalc();
