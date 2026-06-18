@@ -732,7 +732,7 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILES_PER_ITEM = 5;
 const MILEAGE_RATE = 0.50;       // CAD per km, no tax
 // Form build version — BUMP THIS whenever the form changes (e.g., GL dropdowns). Format: v[Date]-[Time].
-const APP_VERSION = "v20260617-1900";
+const APP_VERSION = "v20260617-1930";
 
 /* ============================================================
    AI RECEIPT SCANNING (optional pilot) — Cloudflare Worker + Gemini
@@ -965,11 +965,6 @@ function itemTemplate(internalId){
           <label>Reimbursement rate</label>
           <input type="text" value="CAD $0.50 / km · no tax" readonly />
         </div>
-        <div class="field span2" data-mode="mileage">
-          <label>GL code (locked)</label>
-          <div class="locked" data-milegl>—</div>
-        </div>
-        <div class="field span2" data-mode="mileage"></div>
 
         <div class="field span2">
           <label data-datelabel>Expense date <span class="req">*</span></label>
@@ -985,6 +980,10 @@ function itemTemplate(internalId){
           <label>Five-digit GL code <span class="req">*</span></label>
           <input type="text" inputmode="numeric" maxlength="5" data-f="glcustom" placeholder="e.g. 70999" />
           <span class="err" data-itemerr="glcustom">Enter exactly 5 numeric digits.</span>
+        </div>
+        <div class="field span2" data-mode="mileage">
+          <label>GL code (locked)</label>
+          <div class="locked" data-milegl>—</div>
         </div>
         <div class="field span2">
           <label>Department code override</label>
@@ -1725,7 +1724,7 @@ function finishSubmit(data, blob, filename, mobileLike, reminder){
 
   function deskFallback(){
     triggerDownload(blob, filename);
-    const body=reminder+"\n\n"+summary;
+    const body=">>> "+reminder+" <<<\n\n"+summary;
     const mailto="mailto:"+encodeURIComponent(data.header.mgrEmail)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
     setTimeout(()=>{ window.location.href=mailto; },700);
     toast("PDF downloaded — attach it to the email to your manager.");
