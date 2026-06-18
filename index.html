@@ -732,7 +732,7 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILES_PER_ITEM = 5;
 const MILEAGE_RATE = 0.50;       // CAD per km, no tax
 // Form build version — BUMP THIS whenever the form changes (e.g., GL dropdowns). Format: v[Date]-[Time].
-const APP_VERSION = "v20260617-1930";
+const APP_VERSION = "v20260617-1945";
 
 /* ============================================================
    AI RECEIPT SCANNING (optional pilot) — Cloudflare Worker + Gemini
@@ -1724,7 +1724,7 @@ function finishSubmit(data, blob, filename, mobileLike, reminder){
 
   function deskFallback(){
     triggerDownload(blob, filename);
-    const body=">>> "+reminder+" <<<\n\n"+summary;
+    const body=">>>REMINDER: Please download the assembled expense report PDF and attach it to this email before sending. <<<\n\n"+summary;
     const mailto="mailto:"+encodeURIComponent(data.header.mgrEmail)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
     setTimeout(()=>{ window.location.href=mailto; },700);
     toast("PDF downloaded — attach it to the email to your manager.");
