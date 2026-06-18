@@ -500,6 +500,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .btn-primary:hover{background:#0f221c}
   .btn-secondary{background:#fff;color:var(--green-dark);border:1px solid var(--line-strong);padding:11px 18px}
   .btn-secondary:hover{border-color:var(--green-mid);background:var(--green-soft)}
+  button:disabled,.btn-secondary:disabled{opacity:.5;cursor:not-allowed;background:#fff;border-color:var(--line)}
+  button:disabled:hover,.btn-secondary:disabled:hover{background:#fff;border-color:var(--line)}
   .btn-add{background:var(--green-soft);color:var(--green-dark);border:1px dashed var(--green-mid);padding:12px 18px;width:100%;font-weight:600}
   .btn-add:hover{background:#dfe9e2}
   .btn-link{background:none;color:var(--muted);font-size:12.5px;font-weight:600;padding:4px 6px}
@@ -730,7 +732,7 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILES_PER_ITEM = 5;
 const MILEAGE_RATE = 0.50;       // CAD per km, no tax
 // Form build version — BUMP THIS whenever the form changes (e.g., GL dropdowns). Format: v[Date]-[Time].
-const APP_VERSION = "v20260617-1800";
+const APP_VERSION = "v20260617-1900";
 
 /* ============================================================
    AI RECEIPT SCANNING (optional pilot) — Cloudflare Worker + Gemini
@@ -898,7 +900,7 @@ function itemTemplate(internalId){
         </div>
         <div class="files" data-mode="invoice">
           <div class="files-head">
-            <span class="t">Backup / receipts</span>
+            <span class="t">Backup / receipts (attachments specific to this expense item)</span>
             <span style="font-size:12px;color:var(--muted)" data-filecount>0 / ${MAX_FILES_PER_ITEM} &middot; 20 MB max each</span>
           </div>
           <input type="file" data-fileinput multiple class="hidden" />
@@ -1078,7 +1080,7 @@ function isHeic(f){ return /image\/hei[cf]/i.test(f.type||"") || /\.(heic|heif)$
 async function aiScan(node,id){
   if(!AI_ENABLED) return;
   const status=node.querySelector("[data-aistatus]");
-  const setStatus=(t,err)=>{ if(status){ status.textContent=t; status.style.color=err?"var(--danger)":"var(--muted)"; } };
+  const setStatus=(t,err,warn)=>{ if(status){ status.textContent=t; status.style.color = err?"var(--danger)":(warn?"#B26B00":"var(--muted)"); } };
   if(!$("empDept").value){
     setStatus("Select your Function at the top first \u2014 it lets the AI suggest the right GL code.",true);
     toast("Select your Function before scanning.",true);
@@ -1086,6 +1088,7 @@ async function aiScan(node,id){
     return;
   }
   const files=itemFiles[id]||[];
+  if(files.length>1){ setStatus("AI scanning is unavailable when more than one receipt is attached to this item.",true); return; }
   const file=files.find(f=>/^image\//.test(f.type||"")) || files.find(f=>/pdf/i.test(f.type||"")||/\.pdf$/i.test(f.name||""));
   if(!file){ setStatus("Attach a receipt image or PDF first.",true); return; }
   const mime=file.type || (/\.pdf$/i.test(file.name||"")?"application/pdf":"application/octet-stream");
@@ -1188,6 +1191,11 @@ function renderFiles(id){
     </div>`).join("");
   list.querySelectorAll("[data-rmfile]").forEach(btn=>btn.addEventListener("click",()=>{ itemFiles[id].splice(Number(btn.dataset.rmfile),1); renderFiles(id); }));
   node.querySelector("[data-filecount]").innerHTML=files.length+" / "+MAX_FILES_PER_ITEM+" &middot; 20 MB max each";
+  const aibtn=node.querySelector("[data-aiscan]");
+  if(aibtn){
+    if(files.length>1){ aibtn.disabled=true; aibtn.textContent="AI Unavailable on Multiple Receipts"; }
+    else { aibtn.disabled=false; aibtn.textContent="\u2728 Scan receipt with AI"; }
+  }
 }
 
 function renumber(){
@@ -1457,20 +1465,31 @@ function buildPdf(data, linkBoxes){
       9:{cellWidth:64,halign:"right"}, 10:{cellWidth:54}
     },
     theme:"striped",
+    willDrawCell:(dc)=>{
+      // Suppress autotable's default black text for the Files column; we draw blue underlined links ourselves.
+      if(dc.section==="body" && dc.column.index===10){ const raw=dc.cell.raw; if(raw && raw!=="—") dc.cell.text=[]; }
+    },
     didDrawCell:(dc)=>{
-      // Record the screen position of each file reference token (e.g. 1A) so we can hyperlink it later.
-      if(!linkBoxes || dc.section!=="body" || dc.column.index!==10) return;
+      if(dc.section!=="body" || dc.column.index!==10) return;
       const raw=dc.cell.raw;
       if(!raw || raw==="—") return;
       try{
-        dc.doc.setFont("helvetica","normal"); dc.doc.setFontSize(8);
+        const fs=8;
+        dc.doc.setFont("helvetica","normal"); dc.doc.setFontSize(fs);
         const sepW=dc.doc.getTextWidth(", ");
-        let x=dc.cell.x+3.5; const yTop=dc.cell.y+3.5;
-        String(raw).split(", ").forEach(tok=>{
+        let x=dc.cell.x+3.5; const yTop=dc.cell.y+3.5, baseline=yTop+6.4;
+        dc.doc.setLineWidth(0.5);
+        const toks=String(raw).split(", ");
+        toks.forEach((tok,k)=>{
           const w=dc.doc.getTextWidth(tok);
-          linkBoxes.push({page:dc.pageNumber, tag:tok, x, yTop, w, h:9.5});
-          x+=w+sepW;
+          dc.doc.setTextColor(0,0,238); dc.doc.setDrawColor(0,0,238);
+          dc.doc.text(tok, x, baseline);
+          dc.doc.line(x, baseline+1.1, x+w, baseline+1.1);
+          if(linkBoxes) linkBoxes.push({page:dc.pageNumber, tag:tok, x, yTop, w, h:9.5});
+          x+=w;
+          if(k<toks.length-1){ dc.doc.setTextColor(60,60,60); dc.doc.text(", ", x, baseline); x+=sepW; }
         });
+        dc.doc.setTextColor(30,30,30); dc.doc.setDrawColor(0,0,0);
       }catch(e){}
     },
   });
@@ -1602,11 +1621,13 @@ async function buildFullPdfBytes(data){
     page.drawRectangle({x:0,y:height-HB,width:width,height:HB,color:green});
     page.drawText(label,{x:M,y:height-21,size:13,font:bold,color:rgb(1,1,1)});
     if(sub) page.drawText(truncate(sub,60),{x:M+52,y:height-20,size:9,font:reg,color:rgb(0.78,0.85,0.80)});
-    // "Back to Cover Page" link in the header bar (top-right) -> first page.
+    // "Back to Cover Page" — traditional blue, underlined, just below the header bar (on the white area).
     try{
-      const bt="Back to Cover Page", tw=reg.widthOfTextAtSize(bt,9);
-      page.drawText(bt,{x:width-M-tw,y:height-20,size:9,font:reg,color:rgb(0.82,0.90,0.85)});
-      addInternalLink(page,[width-M-tw-2,height-HB+3,width-M+2,height-3],merged.getPage(0));
+      const bt="Back to Cover Page", fs=9, tw=reg.widthOfTextAtSize(bt,fs);
+      const lx=width-M-tw, ly=height-HB-13, blue=rgb(0,0,0.93);
+      page.drawText(bt,{x:lx,y:ly,size:fs,font:reg,color:blue});
+      page.drawLine({start:{x:lx,y:ly-1.6},end:{x:lx+tw,y:ly-1.6},thickness:0.6,color:blue});
+      addInternalLink(page,[lx-2,ly-3,lx+tw+2,ly+fs+1],merged.getPage(0));
     }catch(e){}
   }
 
